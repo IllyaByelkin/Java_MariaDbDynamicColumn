@@ -4,7 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.sql.SQLException;
 import java.util.Map;
 
-import org.mariadb.dyncol.DynCol;
+import org.mariadb.dyncol.MariaDbDynamicColumn;
 import org.mariadb.dyncol.blob.Blob;
 import org.mariadb.dyncol.data.DynamicType;
 import org.mariadb.dyncol.data.Member;
@@ -49,7 +49,7 @@ public class Util {
 
     /**
      * Util constructor.
-     * 
+     *
      * @param blb
      *            information about DynamycColums
      * @param strType
@@ -65,7 +65,7 @@ public class Util {
 
     /**
      * Decide witch type of string would be, if you add this member.
-     * 
+     *
      * @param name
      *            the name of member
      * @return the type of DynamycColums true - named type, false - numeric
@@ -79,7 +79,7 @@ public class Util {
 
     /**
      * Check the Json, Save Json It use Finite-state machine.
-     * 
+     *
      * @param sstr
      *            is Json string
      * @param data
@@ -165,7 +165,7 @@ public class Util {
                 string = sstr.substring(i, end + 1);
                 Member mem = data.get(name);
                 mem.recordType = DynamicType.get(9);
-                DynCol tempDynCol = new DynCol();
+                MariaDbDynamicColumn tempDynCol = new MariaDbDynamicColumn();
                 try {
                     tempDynCol.setJson(string);
                     mem.setDynCol(tempDynCol);
@@ -226,13 +226,13 @@ public class Util {
                 string += character;
             } else if (ordinate >= 11 && ordinate <= 17) {
                 string += character;
-            } /*if inside the value string back slash, write next symbol*/ else if ((ordinate == 8 
-                    || ordinate == 11 
-                    || ordinate == 12 
-                    || ordinate == 13 
-                    || ordinate == 14 
-                    || ordinate == 15 
-                    || ordinate == 16 
+            } /*if inside the value string back slash, write next symbol*/ else if ((ordinate == 8
+                    || ordinate == 11
+                    || ordinate == 12
+                    || ordinate == 13
+                    || ordinate == 14
+                    || ordinate == 15
+                    || ordinate == 16
                     || ordinate == 17)
                     && abscissa == 5) {
                 string = string + sstr.charAt(i);
@@ -275,7 +275,7 @@ public class Util {
 
     /**
      * Check is string s a number.
-     * 
+     *
      * @param sstr
      *            string to test
      * @return true if inside the string is a number false if not
@@ -294,7 +294,7 @@ public class Util {
 
     /**
      * Calculate size of the blob.
-     * 
+     *
      * @return length of the blob
      * @throws SQLException Unsupported data length
      */
@@ -327,7 +327,7 @@ public class Util {
 
     /**
      * Calculate size of the offset pool.
-     * 
+     *
      * @param dataLength
      *            is length of data
      * @return size of the offset pool
@@ -365,7 +365,7 @@ public class Util {
 
     /**
      * Calculate how many bytes do you need to store this unsignet int.
-     * 
+     *
      * @param val
      *            is value
      * @return how many bytes do you need to store this unsignet int
@@ -378,7 +378,7 @@ public class Util {
 
     /**
      * Calculate how many bytes do you need to store this int.
-     * 
+     *
      * @param val
      *            is value
      * @return how many bytes do you need to store this int
@@ -389,7 +389,7 @@ public class Util {
 
     /**
      * Sort members by the name.
-     * 
+     *
      * @param array
      *            is array that should be sorting
      * @param low
@@ -426,7 +426,7 @@ public class Util {
 
     /**
      * Sort array of strings: first sort by the length, then sort strings with the same length by symbols.
-     * 
+     *
      * @param array
      *            is array that should be sorting
      * @param low
@@ -463,7 +463,7 @@ public class Util {
 
     /**
      * Compare string.
-     * 
+     *
      * @param s1
      *            string #1
      * @param s2
@@ -480,7 +480,7 @@ public class Util {
 
     /**
      * Change the encoding of the string to UTF-8.
-     * 
+     *
      * @param arrayByte
      *            string in old encoding
      * @param encoding
@@ -656,6 +656,112 @@ public class Util {
         rc.value = new byte[byteLong];
         for (int index = 0; index < byteLong; index++) {
             rc.value[index] = blob[blb.headerOffset + blb.nmpoolSize + offsetValue + index];
+        }
+    }
+
+    /**
+     * Conversion a type of the member.
+     * @param mem Member
+     * @return Conversed value
+     * @throws SQLException Parameter unknown and Invalid parameter type
+     * @throws NumberFormatException if something wrong with a number format
+     * @throws UnsupportedEncodingException if encoding is wrong
+     */
+    public static long getMemberIntValue(Member mem) throws SQLException, NumberFormatException, UnsupportedEncodingException {
+        switch (mem.recordType) {
+            case INT:
+                return mem.getInt();
+            case UINT:
+                return mem.getUint();
+            case DOUBLE:
+                return (long) mem.getDouble();
+            case STRING:
+                return Long.parseLong(mem.getString());
+            default:
+                throw new SQLException("Invalid parameter type : asking fpr getInt on a " + mem.recordType + " type", "HY105");
+        }
+    }
+
+    /**
+     * Conversion a type of the member.
+     * @param mem Member
+     * @return Conversed value
+     * @throws SQLException Parameter unknown and Invalid parameter type
+     * @throws NumberFormatException if something wrong with a number format
+     * @throws UnsupportedEncodingException if encoding is wrong
+     */
+    public static long getMemberUintValue(Member mem) throws SQLException, NumberFormatException, UnsupportedEncodingException {
+        switch (mem.recordType) {
+            case INT:
+                return mem.getInt();
+            case UINT:
+                return mem.getUint();
+            case DOUBLE:
+                return (long) mem.getDouble();
+            case STRING:
+                return Long.parseLong(mem.getString());
+            default:
+                throw new SQLException("Invalid parameter type : asking fpr getUint on a " + mem.recordType + " type", "HY105");
+        }
+    }
+
+    /**
+     * Conversion a type of the member.
+     * @param mem Member
+     * @return Conversed value
+     * @throws SQLException Parameter unknown and Invalid parameter type
+     * @throws UnsupportedEncodingException if encoding is wrong
+     */
+    public static String getMemberStringValue(Member mem) throws SQLException, UnsupportedEncodingException {
+        switch (mem.recordType) {
+            case INT:
+                return "" + mem.getInt();
+            case UINT:
+                return "" + mem.getUint();
+            case DOUBLE:
+                return "" + mem.getDouble();
+            case STRING:
+                return mem.getString();
+            default:
+                throw new SQLException("Invalid parameter type : asking for getString on a " + mem.recordType + " type", "HY105");
+        }
+    }
+
+    /**
+     * Conversion a type of the member.
+     * @param mem Member
+     * @return Conversed value
+     * @throws SQLException Parameter unknown and Invalid parameter type
+     * @throws NumberFormatException if something wrong with a number format
+     * @throws UnsupportedEncodingException if encoding is wrong
+     */
+    public static double getMemberDoubleValue(Member mem) throws SQLException, NumberFormatException, UnsupportedEncodingException {
+        switch (mem.recordType) {
+            case INT:
+                return (double) mem.getInt();
+            case UINT:
+                return (double) mem.getUint();
+            case DOUBLE:
+                return mem.getDouble();
+            case STRING:
+                return Long.parseLong(mem.getString());
+            default:
+                throw new SQLException("Invalid parameter type : asking for getDouble on a " + mem.recordType + " type", "HY105");
+        }
+    }
+
+    /**
+     * Conversion a type of the member.
+     * @param mem Member
+     * @return Conversed value
+     * @throws Exception
+     */
+    public static MariaDbDynamicColumn getMemberDynColValue(Member mem) throws Exception  {
+        switch (mem.recordType) {
+            case DYNCOL:
+                return mem.getDynCol();
+            default:
+                throw new SQLException("Invalid parameter type : asking fpr getDouble on a " + mem.recordType + " type", "HY105");
         }
     }
 }

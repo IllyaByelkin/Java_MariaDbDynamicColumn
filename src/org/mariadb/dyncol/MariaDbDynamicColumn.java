@@ -10,6 +10,9 @@ import org.mariadb.dyncol.data.Member;
 import org.mariadb.dyncol.util.Util;
 
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.sql.SQLException;
 
 /*
@@ -18,7 +21,7 @@ import java.sql.SQLException;
  ...
  ...
  */
-public class DynCol {
+public class MariaDbDynamicColumn <T> {
 
     public DynamicType recordTypes;
     Map<String, Member> data = new HashMap<String, Member>();
@@ -28,8 +31,66 @@ public class DynCol {
     public Util utils = new Util(blb, strType, data);
 
     /**
+     *
+     * @param blob DynamicColums
+     * @param tt
+     * @throws Exception Dynamic type is unknown and UnsupportedEncodingException
+     */
+    public void setBlob0(byte[] blob, T tt) throws Exception {
+        //parse blob
+        setBlob(blob);
+
+        //create a new instance of class, and populate data
+        Class cl = tt.getClass();
+        Object instance = cl.newInstance();
+
+        for (Map.Entry<String, Member> entry : data.entrySet()) {
+            String memberCapitalizeMethod = entry.getKey().substring(0, 1).toUpperCase() + entry.getKey().substring(1);
+            Method[] allMethods = cl.getMethods();
+            for (Method method : allMethods) {
+                String methodName = method.getName();
+                if (methodName.equals(memberCapitalizeMethod)) {
+                    Type[] pType = method.getGenericParameterTypes();
+                    if (pType.length != 1) {
+                        continue;
+                    }
+                    try {
+                        Member member = entry.getValue();
+                        method.setAccessible(true);
+                        switch (pType[0].toString()) {
+                            case "byte":
+                                method.invoke(instance, (byte)Util.getMemberIntValue(member));
+                                break;
+                            case "short":
+                                method.invoke(instance, (short)Util.getMemberIntValue(member));
+                                break;
+                            case "int":
+                                method.invoke(instance, (int)Util.getMemberIntValue(member));
+                                break;
+                            case "double":
+                                method.invoke(instance, Util.getMemberDoubleValue(member));
+                                break;
+                            case "String":
+                                method.invoke(instance, Util.getMemberStringValue(member));
+                                break;
+                            case "byte[]":
+                                method.invoke(instance, Util.getMemberDynColValue(member).getBlob());
+                                break;
+                            default:
+                                throw new SQLException("Invalid parameter type : asking for setBlobO on a " + member.recordType + " type", "HY105");
+                        }
+                    } catch (InvocationTargetException x) {
+                        //handle exception
+                    }
+                }
+
+            }
+        }
+    }
+
+    /**
      * Add the member to the DynCol.
-     * 
+     *
      * @param name
      *            Name of member
      * @param value
@@ -47,7 +108,7 @@ public class DynCol {
 
     /**
      * Add the member to the DynCol.
-     * 
+     *
      * @param name
      *            Name of member
      * @param value
@@ -70,7 +131,7 @@ public class DynCol {
 
     /**
      * Add the member to the DynCol.
-     * 
+     *
      * @param name
      *            Name of member
      * @param value
@@ -94,7 +155,7 @@ public class DynCol {
 
     /**
      * Add the member to the DynCol.
-     * 
+     *
      * @param name
      *            Name of member
      * @param value
@@ -112,7 +173,7 @@ public class DynCol {
 
     /**
      * Add the member to the DynCol.
-     * 
+     *
      * @param name
      *            Name of member
      * @param value
@@ -120,13 +181,13 @@ public class DynCol {
      * @throws Exception
      *             Dynamic type is unknown and UnsupportedEncodingException
      */
-    public void setDynCol(String name, DynCol value) throws Exception {
+    public void setDynCol(String name, MariaDbDynamicColumn value) throws Exception {
         if (value == null) {
             if (data.containsKey(name)) {
                 data.remove(name);
             }
         } else {
-            DynCol tempd = new DynCol();
+            MariaDbDynamicColumn tempd = new MariaDbDynamicColumn();
             tempd.setBlob(value.getBlob());
             utils.strType = strType = true;
             data.put(name, new Member());
@@ -138,7 +199,7 @@ public class DynCol {
 
     /**
      * Delete the member from DynCol.
-     * 
+     *
      * @param name
      *            name of the member
      */
@@ -147,8 +208,8 @@ public class DynCol {
     }
 
     /**
-     * Conversion a type of the member.
-     * 
+     * Return the value.
+     *
      * @param name
      *            name of the member
      * @return value
@@ -161,23 +222,12 @@ public class DynCol {
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
-        switch (mem.recordType) {
-            case INT:
-                return mem.getInt();
-            case UINT:
-                return mem.getUint();
-            case DOUBLE:
-                return (long) mem.getDouble();
-            case STRING:
-                return Long.parseLong(mem.getString());
-            default:
-                throw new SQLException("Invalid parameter type : asking fpr getInt on a " + mem.recordType + " type", "HY105");
-        }
+        return utils.getMemberIntValue(mem);
     }
 
     /**
-     * Conversion a type of the member.
-     * 
+     * Return the value.
+     *
      * @param name
      *            name of the member
      * @return value
@@ -190,23 +240,12 @@ public class DynCol {
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
-        switch (mem.recordType) {
-            case INT:
-                return mem.getInt();
-            case UINT:
-                return mem.getUint();
-            case DOUBLE:
-                return (long) mem.getDouble();
-            case STRING:
-                return Long.parseLong(mem.getString());
-            default:
-                throw new SQLException("Invalid parameter type : asking fpr getUint on a " + mem.recordType + " type", "HY105");
-        }
+        return utils.getMemberUintValue(mem);
     }
 
     /**
-     * Conversion a type of the member.
-     * 
+     * Return the value.
+     *
      * @param name
      *            name of the member
      * @return value
@@ -219,23 +258,12 @@ public class DynCol {
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
-        switch (mem.recordType) {
-            case INT:
-                return "" + mem.getInt();
-            case UINT:
-                return "" + mem.getUint();
-            case DOUBLE:
-                return "" + mem.getDouble();
-            case STRING:
-                return mem.getString();
-            default:
-                throw new SQLException("Invalid parameter type : asking fpr getString on a " + mem.recordType + " type", "HY105");
-        }
+        return utils.getMemberStringValue(mem);
     }
 
     /**
-     * Conversion a type of the member.
-     * 
+     * Return the value.
+     *
      * @param name
      *            name of the member
      * @return value
@@ -248,43 +276,27 @@ public class DynCol {
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
-        switch (mem.recordType) {
-            case INT:
-                return (double) mem.getInt();
-            case UINT:
-                return (double) mem.getUint();
-            case DOUBLE:
-                return mem.getDouble();
-            case STRING:
-                return Long.parseLong(mem.getString());
-            default:
-                throw new SQLException("Invalid parameter type : asking fpr getDouble on a " + mem.recordType + " type", "HY105");
-        }
+        return utils.getMemberDoubleValue(mem);
     }
 
     /**
-     * Conversion a type of the member.
-     * 
+     * Return the value.
+     *
      * @param name
      *            name of the member
      * @return value
      * @throws Exception Dynamic type is unknown and UnsupportedEncodingException
      */
-    public DynCol getDynCol(String name) throws Exception {
+    public MariaDbDynamicColumn getDynCol(String name) throws Exception {
         Member mem = data.get(name);
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
-        switch (mem.recordType) {
-            case DYNCOL:
-                return mem.getDynCol();
-            default:
-                throw new SQLException("Invalid parameter type : asking fpr getDouble on a " + mem.recordType + " type", "HY105");
-        }
+        return Util.getMemberDynColValue(mem);
     }
 
     /**
-     * 
+     *
      * @param name.
      *            name of the member
      * @return type of the member
@@ -296,7 +308,7 @@ public class DynCol {
 
     /**
      * Clear the old DynCol (if it was) and save Json string in DynamicColumn format.
-     * 
+     *
      * @param sstr
      *            Json string
      * @throws Exception Dynamic type is unknown and UnsupportedEncodingException
@@ -316,7 +328,7 @@ public class DynCol {
 
     /**
      * Save Json string in DynamicColumn format.
-     * 
+     *
      * @throws Exception Dynamic type is unknown and UnsupportedEncodingException
      */
     public void addJson(String sstr) throws Exception {
@@ -335,7 +347,7 @@ public class DynCol {
 
     /**
      * Convert DynamycColumn format to Json string.
-     * 
+     *
      * @return Json string
      * @throws Exception Dynamic type is unknown and UnsupportedEncodingException
      */
@@ -387,7 +399,7 @@ public class DynCol {
 
     /**
      * save the DynCol.
-     * 
+     *
      * @param blob
      *            DynamicColums
      * @throws Exception Dynamic type is unknown and UnsupportedEncodingException
@@ -489,7 +501,7 @@ public class DynCol {
                 Member rc = new Member();
                 int realOffset = 3;
                 int nextOffsetValue = 0;
-                
+
                 // read the name
                 name = "" + ((blob[realOffset] & 0xFF) | ((blob[realOffset + 1] & 0xFF) << 8));
                 realOffset += 2;
@@ -545,7 +557,7 @@ public class DynCol {
 
     /**
      * Create the Blob.
-     * 
+     *
      * @return the DynCol
      * @throws SQLException SQLException Unsupported data length
      */

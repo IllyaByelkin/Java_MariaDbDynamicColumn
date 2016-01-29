@@ -3,7 +3,7 @@ package org.mariadb.dyncol.data;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
-import org.mariadb.dyncol.DynCol;
+import org.mariadb.dyncol.MariaDbDynamicColumn;
 
 /*
  MariaDB Dynamic column java plugin.
@@ -73,8 +73,8 @@ public class Member {
      * @throws Exception
      *             Dynamic type is unknown and UnsupportedEncodingException
      */
-    public DynCol getDynCol() throws Exception {
-        DynCol val = new DynCol();
+    public MariaDbDynamicColumn getDynCol() throws Exception {
+        MariaDbDynamicColumn val = new MariaDbDynamicColumn();
         val.setBlob(value);
         return val;
     }
@@ -140,7 +140,7 @@ public class Member {
      * @param val
      *            value that should be saved
      */
-    public void setDynCol(DynCol val) throws Exception {
+    public void setDynCol(MariaDbDynamicColumn val) throws Exception {
         value = val.getBlob();
     }
 
