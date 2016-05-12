@@ -5,9 +5,9 @@ import java.sql.SQLException;
 import java.util.Map;
 
 import org.mariadb.dyncol.MariaDbDynamicColumn;
-import org.mariadb.dyncol.blob.Blob;
 import org.mariadb.dyncol.data.DynamicType;
 import org.mariadb.dyncol.data.Member;
+import org.mariadb.dyncol.data.State;
 
 /*
  MariaDB Dynamic column java plugin
@@ -43,25 +43,6 @@ public class Util {
     public final static String CP1256 = "cp1256";
     public final static String CP1257 = "cp1257";
     public final static String MACROMAN = "MacRoman";
-    Blob blb;
-    public boolean strType;
-    Map<String, Member> data;
-
-    /**
-     * Util constructor.
-     *
-     * @param blb
-     *            information about DynamycColums
-     * @param strType
-     *            type of this DynamycColums
-     * @param data
-     *            class with data
-     */
-    public Util(Blob blb, boolean strType, Map<String, Member> data) {
-        this.blb = blb;
-        this.strType = strType;
-        this.data = data;
-    }
 
     /**
      * Decide witch type of string would be, if you add this member.
@@ -70,7 +51,7 @@ public class Util {
      *            the name of member
      * @return the type of DynamycColums true - named type, false - numeric
      */
-    public boolean getStrType(String name) {
+    public static boolean getStrType(String name) {
         if (!isNum(name)) {
             return true;
         }
@@ -78,7 +59,8 @@ public class Util {
     }
 
     /**
-     * Check the Json, Save Json It use Finite-state machine.
+     * This function check the Json and Save the Json.
+     * It use Finite-state machine.
      *
      * @param sstr
      *            is Json string
@@ -88,8 +70,12 @@ public class Util {
      * @throws Exception
      *             Dynamic type is unknown
      */
-    public boolean parseJson(String sstr, Map<String, Member> data) throws Exception {
+    public static  boolean parseJson(String sstr, Map<String, Member> data, State currentState) throws Exception {
         boolean result = false;
+        /**
+         * {@value #testTable} is transition table of the finite-state machine
+         */ 
+
         int testTable[][] = { { 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, { 1, -1, -1, 2, -1, -1, 7, -1, -1, -1, -1, -1 },
                 { 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2 }, { 3, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1 },
                 { 4, 1, 5, 8, -1, -1, -1, -1, -1, 10, 6, -1 }, { 6, -1, 5, -1, -1, -1, 7, 1, -1, -1, -1, 5 },
@@ -155,7 +141,7 @@ public class Util {
                 return false;
             } /*if nested Json*/ else if (ordinate == 4 && abscissa == 1) {
                 nested = true;
-                strType = true;
+                currentState.setColumnsFormat(true);
                 braces++;
                 int coma = sstr.indexOf(",", i);
                 if (coma < 0) {
@@ -183,7 +169,7 @@ public class Util {
                     && (abscissa == 0 || abscissa == 1 || abscissa == 4 || abscissa == 5 || abscissa == 6 || abscissa == 7
                     || abscissa == 8 || abscissa == 9 || abscissa == 10 || abscissa == 11)))
                     && (!nested)) {
-                strType = true;
+                currentState.setColumnsFormat(true);
             }
             // if inside the string back slash
             if ((ordinate == 2 || ordinate == 8 || ordinate == 11 || ordinate == 12 || ordinate == 13 || ordinate == 14 || ordinate == 15
@@ -280,7 +266,7 @@ public class Util {
      *            string to test
      * @return true if inside the string is a number false if not
      */
-    public boolean isNum(String sstr) {
+    public static boolean isNum(String sstr) {
         if ((sstr.charAt(0) == '-' && sstr.length() > 1) || !(sstr.charAt(0) >= '0' && sstr.charAt(0) <= '9')) {
             return false;
         }
@@ -295,68 +281,63 @@ public class Util {
     /**
      * Calculate size of the blob.
      *
+     * length calculation :
+     * for each column :
+     *      2 bytes - offset from the name pool
+     *      length of fixed string header with names
+     * 1 byte - flag
+     * 2 bytes - columns counter
+     * 2 additional bytes for name pool size if columns are store in String
+     *
      * @return length of the blob
      * @throws SQLException Unsupported data length
      */
-    public int getBlobLength() throws SQLException {
-        int columnCount = data.size();
+    public static int getBlobLength(State currentState) throws SQLException {
+        int columnCount = currentState.getData().size();
         int res = 0;
-        blb.nmpoolSize = 0;
-        for (String key : data.keySet()) {
-            Member rec = data.get(key);
+        currentState.getBlobDescription().setNmpoolSize(0);
+        for (String key : currentState.getData().keySet()) {
+            Member rec = currentState.getData().get(key);
             res += rec.value.length;
-            if (strType) {
-                blb.nmpoolSize += key.getBytes().length;
+            if (currentState.isColumnsWithStringFormat()) {
+                currentState.getBlobDescription().setNmpoolSize(currentState.getBlobDescription().getNmpoolSize() + key.getBytes().length);
             }
         }
-        blb.offsetSize = offsetBytes(res);
-        if (strType) {
-            blb.headerOffset = columnCount * (2 /* 2 bytes offset from the name pool */ + blb.offsetSize) + 5; /*length of fixed string header with
-             * names 1 byte - flags, 2 bytes - columns
-             * counter, 2 bytes - name pool size
-             */
-        } else {
-            blb.headerOffset = columnCount * (2 /* 2 bytes offset from the name pool */ + blb.offsetSize) + 3;
-            // length of fixed string header 1 byte -
-            // flags, 2 bytes - columns counter
-        }
-        res += blb.nmpoolSize;
-        res += blb.headerOffset;
+        currentState.getBlobDescription().setOffsetSize(offsetBytes(res, currentState));
+        currentState.getBlobDescription().setHeaderOffset(columnCount * (2 + currentState.getBlobDescription().getOffsetSize()) + (currentState.isColumnsWithStringFormat() ? 5 : 3));
+        res += currentState.getBlobDescription().getNmpoolSize();
+        res += currentState.getBlobDescription().getHeaderOffset();
         return res;
     }
 
     /**
-     * Calculate size of the offset pool.
-     *
-     * @param dataLength
-     *            is length of data
+     * Calculate size of the offset pool, without "if (dataLength < 0xfffffffff)" (as it was in original C vertion), because maximal array index is maximal value of signed int
      * @return size of the offset pool
      * @throws SQLException Unsupported data length
      */
-    public int offsetBytes(int dataLength) throws SQLException {
-        if (strType) {
-            if (dataLength < 0xfff) /* all 1 value is reserved */ {
+    public static int offsetBytes(int dataLength, State currentState) throws SQLException {
+        if (currentState.isColumnsWithStringFormat()) {
+            if (dataLength < 0xfff) {
                 return 2;
             }
-            if (dataLength < 0xfffff) /* all 1 value is reserved */ {
+            if (dataLength < 0xfffff) {
                 return 3;
             }
-            if (dataLength < 0xfffffff) /* all 1 value is reserved */ {
+            if (dataLength < 0xfffffff) {
                 return 4;
             }
-            // without if (dataLength < 0xfffffffff), because of max array index is signed int
             throw new SQLException("Unsupported data length", "22000");
         } else {
-            if (dataLength < 0x1f) /* all 1 value is reserved */ {
+            if (dataLength < 0x1f) {
                 return 1;
             }
-            if (dataLength < 0x1fff) /* all 1 value is reserved */ {
+            if (dataLength < 0x1fff) {
                 return 2;
             }
-            if (dataLength < 0x1fffff) /* all 1 value is reserved */ {
+            if (dataLength < 0x1fffff) {
                 return 3;
             }
-            if (dataLength < 0x1fffffff) /* all 1 value is reserved */ {
+            if (dataLength < 0x1fffffff) {
                 return 4;
             }
             throw new SQLException("Unsupported data length", "22000");
@@ -370,25 +351,33 @@ public class Util {
      *            is value
      * @return how many bytes do you need to store this unsignet int
      */
-    public int uintBytes(long val) {
+    public static int uintBytes(long val) {
         int len;
         for (len = 0; val != 0; val >>>= 8, len++) {}
         return len;
     }
 
     /**
-     * Calculate how many bytes do you need to store this int.
+     * Convert from DynamicColumn signet int to normal int:
+     * 1 -> 1
+     * 2 -> -1
+     * 3 -> 2
+     * 4 -> -2
+     * 5 -> 3
+     * 6 -> -3
+     * Then use uintBytes() method.
+     * @see org.mariadb.dyncol.util.Util#uintBytes()
      *
      * @param val
      *            is value
      * @return how many bytes do you need to store this int
      */
-    public int sintBytes(long val) {
+    public static int sintBytes(long val) {
         return uintBytes((val << 1) ^ (val < 0 ? (-1) : 0));
     }
 
     /**
-     * Sort members by the name.
+     * Sort members by the name, use quicksort
      *
      * @param array
      *            is array that should be sorting
@@ -397,7 +386,7 @@ public class Util {
      * @param high
      *            is index of last element
      */
-    public void quSort(int[] array, int low, int high) {
+    public static void quSort(int[] array, int low, int high) {
         int iiAxis = low;
         int jjAxis = high;
         int middle = array[(low + high) / 2];
@@ -434,7 +423,7 @@ public class Util {
      * @param high
      *            is index of last element
      */
-    public void quSort(String[] array, int low, int high) {
+    public static void quSort(String[] array, int low, int high) {
         int iiAxis = low;
         int jjAxis = high;
         String middle = array[(low + high) / 2];
@@ -462,7 +451,7 @@ public class Util {
     }
 
     /**
-     * Compare string.
+     * Compare string, first by length, then if length is the same foe both strings by symbols.
      *
      * @param s1
      *            string #1
@@ -470,7 +459,7 @@ public class Util {
      *            string #2
      * @return 0 if strings are the same, < 0 if string #1 is smaller then string #2, > 0 if string #1 is bigger then string #2
      */
-    public int compareStr(String s1, String s2) {
+    public static int compareStr(String s1, String s2) {
         int res = (s1.length() > s2.length() ? 1 : (s1.length() < s2.length() ? -1 : 0));
         if (res == 0) {
             res = s1.compareTo(s2);
@@ -489,7 +478,7 @@ public class Util {
      * @throws UnsupportedEncodingException
      *             if encoding is wrong
      */
-    public String parseStr(byte[] arrayByte, int encoding) throws UnsupportedEncodingException {
+    public static String parseStr(byte[] arrayByte, int encoding) throws UnsupportedEncodingException {
         String res;
         String encodingstr;
         switch (encoding) {
@@ -635,7 +624,7 @@ public class Util {
      *            offset from the start of the array
      * @return how much bytes use this member
      */
-    public int putValue(byte[] blob, Member rc, int offset) {
+    public static int putValue(byte[] blob, Member rc, int offset) {
         for (int index = 0; index < rc.value.length; index++) {
             blob[offset + index] = rc.value[index];
         }
@@ -652,15 +641,15 @@ public class Util {
      * @param byteLong
      *            how much bytes use this member
      */
-    public void saveValue(byte[] blob, Member rc, int offsetValue, int byteLong) {
+    public static void saveValue(byte[] blob, Member rc, int offsetValue, int byteLong, State currentState) {
         rc.value = new byte[byteLong];
         for (int index = 0; index < byteLong; index++) {
-            rc.value[index] = blob[blb.headerOffset + blb.nmpoolSize + offsetValue + index];
+            rc.value[index] = blob[currentState.getBlobDescription().getHeaderOffset() + currentState.getBlobDescription().getNmpoolSize() + offsetValue + index];
         }
     }
 
     /**
-     * Conversion a type of the member.
+     * Conversion a type of the member to int.
      * @param mem Member
      * @return Conversed value
      * @throws SQLException Parameter unknown and Invalid parameter type
@@ -683,7 +672,7 @@ public class Util {
     }
 
     /**
-     * Conversion a type of the member.
+     * Conversion a type of the member to int.
      * @param mem Member
      * @return Conversed value
      * @throws SQLException Parameter unknown and Invalid parameter type
@@ -706,7 +695,7 @@ public class Util {
     }
 
     /**
-     * Conversion a type of the member.
+     * Conversion a type of the member to string.
      * @param mem Member
      * @return Conversed value
      * @throws SQLException Parameter unknown and Invalid parameter type
@@ -728,7 +717,7 @@ public class Util {
     }
 
     /**
-     * Conversion a type of the member.
+     * Conversion a type of the member to double.
      * @param mem Member
      * @return Conversed value
      * @throws SQLException Parameter unknown and Invalid parameter type
@@ -751,7 +740,7 @@ public class Util {
     }
 
     /**
-     * Conversion a type of the member.
+     * Conversion a type of the member to MariaDbDynamicColumn.
      * @param mem Member
      * @return Conversed value
      * @throws Exception

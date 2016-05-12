@@ -11,15 +11,19 @@ import org.mariadb.dyncol.MariaDbDynamicColumn;
  ...
  ...
  */
+
+/**
+ Contain the value in DynamicColumn blob form.
+ */
 public class Member {
     public final static String UTF_8 = "UTF-8";
     public DynamicType recordType;
     public byte[] value;
 
     /**
-     * Decode the value.
+     * Convert from array of bytes (put 8 bits from every next byte of array on the top of the number).
      * 
-     * @return decoded value
+     * @return converted value
      */
     public long getUint() {
         long val = 0;
@@ -30,9 +34,16 @@ public class Member {
     }
 
     /**
-     * Decode the value.
+     * Convert from array of bytes (put 8 bits from every next byte of array on the top of the number)
+     * saved as DynamicColumn signet int to normal int:
+     * 1 -> 1
+     * 2 -> -1
+     * 3 -> 2
+     * 4 -> -2
+     * 5 -> 3
+     * 6 -> -3
      * 
-     * @return decoded value
+     * @return converted value
      */
     public long getInt() {
         long val = 0;
@@ -48,18 +59,20 @@ public class Member {
     }
 
     /**
-     * Decode the value.
+     * Convert from array of bytes (put 8 bits from every next byte of array on the top of the number)
      * 
-     * @return decoded value
+     * @return converted value
      */
     public double getDouble() {
         return Double.longBitsToDouble(getUint());
     }
 
     /**
-     * Decode the value.
+     * Construct a new string from array of bytes
+     * and cut the first byte that contains nummer of encoding.
+     * It don't read it because encoding can be only UTF8.
      * 
-     * @return decoded value
+     * @return constructed string
      */
     public String getString() throws UnsupportedEncodingException {
         String str = new String(Arrays.copyOfRange(value, 1, value.length), UTF_8);
@@ -67,7 +80,8 @@ public class Member {
     }
 
     /**
-     * Decode the value.
+     * Create a new inserted MariaDbDynamicColumns object, and parse array of bytes with a setBlob() method.
+     * @see org.mariadb.dyncol.MariaDbDynamicColumns#setBlob()
      * 
      * @return decoded value
      * @throws Exception
@@ -80,7 +94,8 @@ public class Member {
     }
 
     /**
-     * save value in byte form.
+     * convert value to array of bytes form:
+     * Cut each 8 bits from the head of the namber, and stor it in every next element of array.
      * 
      * @param val
      *            value that should be saved
@@ -94,7 +109,15 @@ public class Member {
     }
 
     /**
-     * save value in byte form.
+     * convert value to DynamicColumn signet int form:
+     * -1 -> 1
+     * 1 -> 2
+     * -2 -> 3
+     * 2 -> 4
+     * -3 -> 5
+     * 3 -> 6
+     * And then use method setUint to converted parametr.
+     * @see org.mariadb.dyncol.data.Member#setUint()
      * 
      * @param val
      *            value that should be saved
@@ -105,7 +128,8 @@ public class Member {
     }
 
     /**
-     * save value in byte form.
+     * Convert value in byte form:
+     * Cut each 8 bits from the head of the namber, and stor it in every next element of array.
      * 
      * @param val
      *            value that should be saved
@@ -120,10 +144,10 @@ public class Member {
     }
 
     /**
-     * save value in byte form.
+     * Convert a string in array of bytes and add a nummer of encoding (45 is UTF8)
      * 
      * @param val
-     *            value that should be saved
+     *            string that should be converted
      */
     public void setString(String val) {
         value = new byte[val.length() + 1];
@@ -135,7 +159,8 @@ public class Member {
     }
 
     /**
-     * save value in byte form.
+     * Converta MariaDbDynamicColumnDynamycColumn to a byte forme with help of getBlob() method.
+     * @see org.mariadb.dyncol.data.Member#getBlob()
      * 
      * @param val
      *            value that should be saved
@@ -145,7 +170,7 @@ public class Member {
     }
 
     /**
-     * Calculate uint size.
+     * Calculate uint size by cutting every next 8 bits untill value become 0
      * 
      * @param val
      *            value

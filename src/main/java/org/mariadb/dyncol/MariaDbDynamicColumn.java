@@ -4,9 +4,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.mariadb.dyncol.blob.Blob;
 import org.mariadb.dyncol.data.DynamicType;
 import org.mariadb.dyncol.data.Member;
+import org.mariadb.dyncol.data.State;
 import org.mariadb.dyncol.util.Util;
 
 import java.io.UnsupportedEncodingException;
@@ -24,14 +24,9 @@ import java.sql.SQLException;
 public class MariaDbDynamicColumn <T> {
 
     public DynamicType recordTypes;
-    Map<String, Member> data = new HashMap<String, Member>();
-    boolean strType = false; // true - Columns with names, false - Numeric format
-    int errorIndex = 0;
-    Blob blb = new Blob();
-    public Util utils = new Util(blb, strType, data);
+    State currentState = new State();
 
     /**
-     *
      * @param blob DynamicColums
      * @param tt
      * @throws Exception Dynamic type is unknown and UnsupportedEncodingException
@@ -44,7 +39,7 @@ public class MariaDbDynamicColumn <T> {
         Class cl = tt.getClass();
         Object instance = cl.newInstance();
 
-        for (Map.Entry<String, Member> entry : data.entrySet()) {
+        for (Map.Entry<String, Member> entry : currentState.getData().entrySet()) {
             String memberCapitalizeMethod = entry.getKey().substring(0, 1).toUpperCase() + entry.getKey().substring(1);
             Method[] allMethods = cl.getMethods();
             for (Method method : allMethods) {
@@ -89,7 +84,9 @@ public class MariaDbDynamicColumn <T> {
     }
 
     /**
-     * Add the member to the DynCol.
+     * Check the format of the name, change the format of the sring if it necessary.
+     * Save the value with help of setInt() method.
+     * @see org.mariadb.dyncol.data.Member#setInt()
      *
      * @param name
      *            Name of member
@@ -97,17 +94,19 @@ public class MariaDbDynamicColumn <T> {
      *            Value of member
      */
     public void setInt(String name, long value) {
-        data.put(name, new Member());
-        if (!strType) {
-            utils.strType = strType = utils.getStrType(name);
+        currentState.getData().put(name, new Member());
+        if (!currentState.isColumnsWithStringFormat()) {
+            currentState.setColumnsFormat(Util.getStrType(name));
         }
-        Member mem = data.get(name);
+        Member mem = currentState.getData().get(name);
         mem.recordType = DynamicType.INT;
         mem.setInt(value);
     }
 
     /**
-     * Add the member to the DynCol.
+     * Check the format of the name, change the format of the sring if it necessary.
+     * Save the value with help of setUint() method.
+     * @see org.mariadb.dyncol.data.Member#setUint()
      *
      * @param name
      *            Name of member
@@ -116,21 +115,24 @@ public class MariaDbDynamicColumn <T> {
      * @throws Exception illegal argument
      */
     public void setUint(String name, long value) throws Exception {
-        if (!strType) {
-            utils.strType = strType = utils.getStrType(name);
+        if (!currentState.isColumnsWithStringFormat()) {
+            currentState.setColumnsFormat(Util.getStrType(name));
         }
         if (value < 0) {
             throw new Exception("value " + value + " is illegal");
         } else {
-            data.put(name, new Member());
-            Member mem = data.get(name);
+            currentState.getData().put(name, new Member());
+            Member mem = currentState.getData().get(name);
             mem.recordType = DynamicType.UINT;
             mem.setUint(value);
         }
     }
 
     /**
-     * Add the member to the DynCol.
+     * If the String is null delete the member.
+     * Check the format of the name, change the format of the sring if it necessary.
+     * Save the value with help of setString() method.
+     * @see org.mariadb.dyncol.data.Member#setString()
      *
      * @param name
      *            Name of member
@@ -139,22 +141,24 @@ public class MariaDbDynamicColumn <T> {
      */
     public void setString(String name, String value) {
         if (value == null) {
-            if (data.containsKey(name)) {
-                data.remove(name);
+            if (currentState.getData().containsKey(name)) {
+                currentState.getData().remove(name);
             }
         } else {
-            if (!strType) {
-                utils.strType = strType = utils.getStrType(name);
+            if (!currentState.isColumnsWithStringFormat()) {
+                currentState.setColumnsFormat(Util.getStrType(name));
             }
-            data.put(name, new Member());
-            Member mem = data.get(name);
+            currentState.getData().put(name, new Member());
+            Member mem = currentState.getData().get(name);
             mem.recordType = DynamicType.STRING;
             mem.setString(value);
         }
     }
 
     /**
-     * Add the member to the DynCol.
+     * Check the format of the name, change the format of the sring if it necessary.
+     * Save the value with help of setDouble() method.
+     * @see org.mariadb.dyncol.data.Member#setDouble()
      *
      * @param name
      *            Name of member
@@ -162,17 +166,20 @@ public class MariaDbDynamicColumn <T> {
      *            Value of member
      */
     public void setDouble(String name, double value) {
-        if (!strType) {
-            utils.strType = strType = utils.getStrType(name);
+        if (!currentState.isColumnsWithStringFormat()) {
+            currentState.setColumnsFormat(Util.getStrType(name));
         }
-        data.put(name, new Member());
-        Member mem = data.get(name);
+        currentState.getData().put(name, new Member());
+        Member mem = currentState.getData().get(name);
         mem.recordType = DynamicType.DOUBLE;
         mem.setDouble(value);
     }
 
     /**
-     * Add the member to the DynCol.
+     * If the DynCol is null delete the member.
+     * Don't check the format of the name, because inserted DynCol can be only in String format DynamicColumns.
+     * Save the value with help of setDynCol() method.
+     * @see org.mariadb.dyncol.data.Member#setDynCol()
      *
      * @param name
      *            Name of member
@@ -183,15 +190,15 @@ public class MariaDbDynamicColumn <T> {
      */
     public void setDynCol(String name, MariaDbDynamicColumn value) throws Exception {
         if (value == null) {
-            if (data.containsKey(name)) {
-                data.remove(name);
+            if (currentState.getData().containsKey(name)) {
+                currentState.getData().remove(name);
             }
         } else {
             MariaDbDynamicColumn tempd = new MariaDbDynamicColumn();
             tempd.setBlob(value.getBlob());
-            utils.strType = strType = true;
-            data.put(name, new Member());
-            Member mem = data.get(name);
+            currentState.setColumnsFormat(true);
+            currentState.getData().put(name, new Member());
+            Member mem = currentState.getData().get(name);
             mem.recordType = DynamicType.DYNCOL;
             mem.setDynCol(tempd);
         }
@@ -204,11 +211,12 @@ public class MariaDbDynamicColumn <T> {
      *            name of the member
      */
     public void remove(String name) {
-        data.remove(name);
+        currentState.getData().remove(name);
     }
 
     /**
-     * Return the value.
+     * Return the int value with help of getMemberIntValue() method.
+     * @see org.mariadb.dyncol.util.Util#getMemberIntValue().
      *
      * @param name
      *            name of the member
@@ -218,15 +226,16 @@ public class MariaDbDynamicColumn <T> {
      * @throws UnsupportedEncodingException if encoding is wrong
      */
     public long getInt(String name) throws SQLException, NumberFormatException, UnsupportedEncodingException {
-        Member mem = data.get(name);
+        Member mem = currentState.getData().get(name);
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
-        return utils.getMemberIntValue(mem);
+        return Util.getMemberIntValue(mem);
     }
 
     /**
-     * Return the value.
+     * Return the int value with help of getMemberUintValue() method.
+     * @see org.mariadb.dyncol.util.Util#getMemberUintValue().
      *
      * @param name
      *            name of the member
@@ -236,15 +245,16 @@ public class MariaDbDynamicColumn <T> {
      * @throws UnsupportedEncodingException if encoding is wrong
      */
     public long getUint(String name) throws SQLException, NumberFormatException, UnsupportedEncodingException {
-        Member mem = data.get(name);
+        Member mem = currentState.getData().get(name);
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
-        return utils.getMemberUintValue(mem);
+        return Util.getMemberUintValue(mem);
     }
 
     /**
-     * Return the value.
+     * Return the string value with help of getMemberStringValue() method.
+     * @see org.mariadb.dyncol.util.Util#getMemberStringValue().
      *
      * @param name
      *            name of the member
@@ -254,15 +264,16 @@ public class MariaDbDynamicColumn <T> {
      * @throws UnsupportedEncodingException if encoding is wrong
      */
     public String getString(String name) throws SQLException, UnsupportedEncodingException {
-        Member mem = data.get(name);
+        Member mem = currentState.getData().get(name);
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
-        return utils.getMemberStringValue(mem);
+        return Util.getMemberStringValue(mem);
     }
 
     /**
-     * Return the value.
+     * Return the double value with help of getMemberDoubleValue() method.
+     * @see org.mariadb.dyncol.util.Util#getMemberDoubleValue().
      *
      * @param name
      *            name of the member
@@ -272,15 +283,16 @@ public class MariaDbDynamicColumn <T> {
      * @throws UnsupportedEncodingException if encoding is wrong
      */
     public double getDouble(String name) throws SQLException, NumberFormatException, UnsupportedEncodingException {
-        Member mem = data.get(name);
+        Member mem = currentState.getData().get(name);
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
-        return utils.getMemberDoubleValue(mem);
+        return Util.getMemberDoubleValue(mem);
     }
 
     /**
-     * Return the value.
+     * Return the MariaDbDynamicColumn value with help of getMemberDynColValue() method.
+     * @see org.mariadb.dyncol.util.Util#getMemberDynColValue().
      *
      * @param name
      *            name of the member
@@ -288,7 +300,7 @@ public class MariaDbDynamicColumn <T> {
      * @throws Exception Dynamic type is unknown and UnsupportedEncodingException
      */
     public MariaDbDynamicColumn getDynCol(String name) throws Exception {
-        Member mem = data.get(name);
+        Member mem = currentState.getData().get(name);
         if (mem == null) {
             throw new SQLException("Parameter '" + name + "' unknown", "07002");
         }
@@ -302,7 +314,7 @@ public class MariaDbDynamicColumn <T> {
      * @return type of the member
      */
     public DynamicType getRecodFormat(String name) {
-        Member mem = data.get(name);
+        Member mem = currentState.getData().get(name);
         return mem.recordType;
     }
 
@@ -317,12 +329,10 @@ public class MariaDbDynamicColumn <T> {
         if (sstr == null) {
             throw new NullPointerException();
         }
-        data.clear();
-        if (!utils.parseJson(sstr, data)) {
-            data.clear();
+        currentState.getData().clear();
+        if (!Util.parseJson(sstr, currentState.getData(), currentState)) {
+            currentState.getData().clear();
             throw new SQLException("syntax error", "22000");
-        } else {
-            utils.strType = strType = utils.strType;
         }
     }
 
@@ -336,12 +346,11 @@ public class MariaDbDynamicColumn <T> {
             throw new SQLException("no data", "02000");
         }
         Map<String, Member> data = new HashMap<String, Member>();
-        if (!utils.parseJson(sstr, data)) {
+        if (!Util.parseJson(sstr, data, currentState)) {
             data.clear();
             throw new SQLException("syntax error", "22000");
         } else {
-            utils.strType = strType = utils.strType;
-            this.data.putAll(data);
+            this.currentState.getData().putAll(data);
         }
     }
 
@@ -353,12 +362,12 @@ public class MariaDbDynamicColumn <T> {
      */
     public String getJson() throws Exception {
         String result = "{";
-        if (data.size() == 0) {
+        if (currentState.getData().size() == 0) {
             result = "{}";
             return result;
         }
         boolean isFirst = true;
-        for (Entry<String, Member> entry : data.entrySet()) {
+        for (Entry<String, Member> entry : currentState.getData().entrySet()) {
             if (!isFirst) {
                 result += ',';
             } else {
@@ -408,29 +417,27 @@ public class MariaDbDynamicColumn <T> {
         if (blob == null) {
             throw new NullPointerException();
         } else if (blob.length == 3 || blob.length == 5) {
-            data.clear();
+            currentState.getData().clear();
         } else {
-            errorIndex = 0;
-            data.clear();
-            blb = new Blob();
-            blb.blobSize = blob.length;
+            currentState.getData().clear();
+            currentState.createBlobDescription();
+            currentState.getBlobDescription().setBlobSize(blob.length);
             // if 2nd bit is 1, then type of string is named
             if (((blob[0] & 4) >>> 2) == 1) {
-                utils.strType = strType = true;
+                currentState.setColumnsFormat(true);
             } else {
-                utils.strType = strType = false;
+                currentState.setColumnsFormat(false);
             }
-            utils = new Util(blb, strType, data);
             // read the offset size from first 2 bits
-            blb.offsetSize = (blob[0] & 3) + (strType ? 2 : 1);
-            int columnCount = data.size();
+            currentState.getBlobDescription().setOffsetSize((blob[0] & 3) + (currentState.isColumnsWithStringFormat() ? 2 : 1));
+            int columnCount = currentState.getData().size();
             // read the column count from 1st and 2nd bytes
             columnCount = ((blob[2] & 0xFF) << 8) | (blob[1] & 0xFF);
             // calculating offset of all the header
-            blb.headerOffset = (strType ? 5 : 3) + columnCount * (2 + blb.offsetSize);
-            if (strType) {
+            currentState.getBlobDescription().setHeaderOffset((currentState.isColumnsWithStringFormat() ? 5 : 3) + columnCount * (2 + currentState.getBlobDescription().getOffsetSize()));
+            if (currentState.isColumnsWithStringFormat()) {
                 // read name pool size from bytes #3 and 4
-                blb.nmpoolSize = ((blob[4] & 0xFF) << 8) | (blob[3] & 0xFF);
+                currentState.getBlobDescription().setNmpoolSize(((blob[4] & 0xFF) << 8) | (blob[3] & 0xFF));
                 String name;
                 Member rc = new Member();
                 int realOffset = 5;
@@ -446,11 +453,11 @@ public class MariaDbDynamicColumn <T> {
                 // read offset of the value, from beginning of the data pool
                 realOffsetValue = (blob[realOffset] & 0xFF) >>> 4;
                 realOffset++;
-                if (blb.offsetSize > 1) {
+                if (currentState.getBlobDescription().getOffsetSize() > 1) {
                     realOffsetValue = realOffsetValue | ((blob[realOffset] & 0xFF) << 4);
                     realOffset++;
                 }
-                for (int index = 2; index < blb.offsetSize; index++) {
+                for (int index = 2; index < currentState.getBlobDescription().getOffsetSize(); index++) {
                     realOffsetValue = realOffsetValue | (blob[realOffset] & 0xFF) << (4 + 8 * (index - 1));
                     realOffset++;
                 }
@@ -467,30 +474,32 @@ public class MariaDbDynamicColumn <T> {
                         // reading the next value offset
                         nextOffsetValue = (blob[realOffset] & 0xFF) >>> 4;
                         realOffset++;
-                        if (blb.offsetSize > 1) {
+                        if (currentState.getBlobDescription().getOffsetSize() > 1) {
                             nextOffsetValue = nextOffsetValue | (blob[realOffset] & 0xFF) << (4);
                             realOffset++;
                         }
-                        for (int index = 2; index < blb.offsetSize; index++) {
+                        for (int index = 2; index < currentState.getBlobDescription().getOffsetSize(); index++) {
                             nextOffsetValue = nextOffsetValue | (blob[realOffset] & 0xFF) << (4 + 8 * (index - 1));
                             realOffset++;
                         }
                     } else {
-                        nextOffsetName = blb.nmpoolSize;
-                        nextOffsetValue = blb.blobSize - blb.headerOffset - blb.nmpoolSize;
+                        nextOffsetName = currentState.getBlobDescription().getNmpoolSize();
+                        nextOffsetValue = currentState.getBlobDescription().getBlobSize()
+                                - currentState.getBlobDescription().getHeaderOffset()
+                                - currentState.getBlobDescription().getNmpoolSize();
                     }
                     // calculating the name size
                     int byteLong = nextOffsetName - realOffsetName;
                     // read the name
                     byte[] arrayByte = new byte[byteLong];
                     for (int index = 0; index < byteLong; index++) {
-                        arrayByte[index] = blob[blb.headerOffset + realOffsetName + index];
+                        arrayByte[index] = blob[currentState.getBlobDescription().getHeaderOffset() + realOffsetName + index];
                     }
                     name = new String(arrayByte, "UTF-8");
                     realOffsetName = nextOffsetName;
                     // read the values
-                    utils.saveValue(blob, rc, realOffsetValue, nextOffsetValue - realOffsetValue);
-                    data.put(name, rc);
+                    Util.saveValue(blob, rc, realOffsetValue, nextOffsetValue - realOffsetValue, currentState);
+                    currentState.getData().put(name, rc);
                     realOffsetValue = nextOffsetValue;
                     rc = new Member();
                     rc.recordType = DynamicType.get(recordType);
@@ -511,11 +520,11 @@ public class MariaDbDynamicColumn <T> {
                 // read offset of the value, from beginning of the data pool
                 realOffsetValue = (blob[realOffset] & 0xFF) >>> 3;
                 realOffset++;
-                if (blb.offsetSize > 1) {
+                if (currentState.getBlobDescription().getOffsetSize() > 1) {
                     realOffsetValue = realOffsetValue | ((blob[realOffset] & 0xFF) << 3);
                     realOffset++;
                 }
-                for (int index = 2; index < blb.offsetSize; index++) {
+                for (int index = 2; index < currentState.getBlobDescription().getOffsetSize(); index++) {
                     realOffsetValue = realOffsetValue | (blob[realOffset] & 0xFF) << (3 + 8 * (index - 1));
                     realOffset++;
                 }
@@ -531,21 +540,21 @@ public class MariaDbDynamicColumn <T> {
                         // reading the next value offset
                         nextOffsetValue = (blob[realOffset] & 0xFF) >>> 3;
                         realOffset++;
-                        if (blb.offsetSize > 1) {
+                        if (currentState.getBlobDescription().getOffsetSize() > 1) {
                             nextOffsetValue = nextOffsetValue | (blob[realOffset] & 0xFF) << (3);
                             realOffset++;
                         }
-                        for (int index = 2; index < blb.offsetSize; index++) {
+                        for (int index = 2; index < currentState.getBlobDescription().getOffsetSize(); index++) {
                             nextOffsetValue = nextOffsetValue | (blob[realOffset] & 0xFF) << (3 + 8 * (index - 1));
                             realOffset++;
                         }
                     } else {
                         nextName = null;
-                        nextOffsetValue = blb.blobSize - blb.headerOffset;
+                        nextOffsetValue = currentState.getBlobDescription().getBlobSize() - currentState.getBlobDescription().getHeaderOffset();
                     }
                     // read the values
-                    utils.saveValue(blob, rc, realOffsetValue, nextOffsetValue - realOffsetValue);
-                    data.put(name, rc);
+                    Util.saveValue(blob, rc, realOffsetValue, nextOffsetValue - realOffsetValue, currentState);
+                    currentState.getData().put(name, rc);
                     name = nextName;
                     realOffsetValue = nextOffsetValue;
                     rc = new Member();
@@ -563,37 +572,36 @@ public class MariaDbDynamicColumn <T> {
      */
     public byte[] getBlob() throws SQLException {
         byte[] blob;
-        int columnCount = data.size();
+        int columnCount = currentState.getData().size();
         if (columnCount == 0) {
             blob = new byte[3];
             return blob;
         }
-        int blbSize = utils.getBlobLength();
-        blob = new byte[(blb.blobSize = blbSize)];
+        currentState.createBlobDescription();
+        currentState.getBlobDescription().setBlobSize(Util.getBlobLength(currentState));
+        blob = new byte[currentState.getBlobDescription().getBlobSize()];
         // put the flags
-        blob[0] = (byte) (((blb.offsetSize - (strType ? 2 : 1)) & 3) | (strType ? 4 : 0));
+        blob[0] = (byte) (((currentState.getBlobDescription().getOffsetSize()
+                - (currentState.isColumnsWithStringFormat() ? 2 : 1)) & 3) | (currentState.isColumnsWithStringFormat() ? 4 : 0));
         // put column count
         blob[1] = (byte) (columnCount & 0xFF);
         blob[2] = (byte) ((columnCount >>> 8) & 0xFF);
-        // offset of
-        /*
-         * offset is offset of header entry header entry is column number or string pointer + offset & type
-         */
+        //offset of header entry, header entry is column number or string pointer + offset & type
         int offset = 0;
         // offset from beginning of the data pool
         int dataOffset = 0;
-        if (strType) {
+        if (currentState.isColumnsWithStringFormat()) {
             String[] keyarray = new String[columnCount];
             // put the length of name pool
-            blob[3] = (byte) (blb.nmpoolSize & 0xFF);
-            blob[4] = (byte) ((blb.nmpoolSize >>> 8) & 0xFF);
+            blob[3] = (byte) (currentState.getBlobDescription().getNmpoolSize() & 0xFF);
+            blob[4] = (byte) ((currentState.getBlobDescription().getNmpoolSize() >>> 8) & 0xFF);
             int inex = 0;
-            for (String key : data.keySet()) {
+            for (String key : currentState.getData().keySet()) {
                 keyarray[inex] = key;
                 inex++;
             }
             // sort the names
-            utils.quSort(keyarray, 0, columnCount - 1);
+            Util.quSort(keyarray, 0, columnCount - 1);
             offset = 5;// flag byte + number of columns 2 bytes + name pool length 2 bytes = 5 bytes
             // offset from beginning of the name pool
             int nameOffset = 0;
@@ -602,50 +610,50 @@ public class MariaDbDynamicColumn <T> {
                 blob[offset] = (byte) (nameOffset & 0xFF);
                 blob[offset + 1] = (byte) ((nameOffset >>> 8) & 0xFF);
                 offset += 2;
-                Member rec = data.get("" + keyarray[inex]);
+                Member rec = currentState.getData().get("" + keyarray[inex]);
                 // put offset of the data + 4 byte data type
                 blob[offset] = (byte) ((rec.recordType.ordinal() - 1) | ((dataOffset & 15) << 4));
                 int tdataOffset = dataOffset >>> 4;
-                for (int j = 1; j < blb.offsetSize; j++) {
+                for (int j = 1; j < currentState.getBlobDescription().getOffsetSize(); j++) {
                     blob[offset + j] = (byte) ((tdataOffset & 0xFF));
                     tdataOffset = dataOffset >>> 8;
                 }
-                offset += blb.offsetSize;
+                offset += currentState.getBlobDescription().getOffsetSize();
                 // put the name
                 byte[] name = keyarray[inex].getBytes();
                 for (int ind = 0; ind < name.length; ind++) {
-                    blob[blb.headerOffset + nameOffset + ind] = name[ind];
+                    blob[currentState.getBlobDescription().getHeaderOffset() + nameOffset + ind] = name[ind];
                 }
                 nameOffset += name.length;
                 // put the data
-                dataOffset += utils.putValue(blob, rec, blb.headerOffset + blb.nmpoolSize + dataOffset);
+                dataOffset += Util.putValue(blob, rec, currentState.getBlobDescription().getHeaderOffset() + currentState.getBlobDescription().getNmpoolSize() + dataOffset);
             }
         } else {
             int[] keyarray = new int[columnCount];
             int index = 0;
-            for (String key : data.keySet()) {
+            for (String key : currentState.getData().keySet()) {
                 keyarray[index] = Integer.parseInt(key);
                 index++;
             }
             // sort the names
-            utils.quSort(keyarray, 0, columnCount - 1);
+            Util.quSort(keyarray, 0, columnCount - 1);
             offset = 3;// flag byte + number of columns 2 bytes = 3 bytes
             for (index = 0; index < columnCount; index++) {
                 // put the name
                 blob[offset] = (byte) (keyarray[index] & 0xFF);
                 blob[offset + 1] = (byte) ((keyarray[index] >>> 8) & 0xFF);
                 offset += 2;
-                Member rec = data.get("" + keyarray[index]);
+                Member rec = currentState.getData().get("" + keyarray[index]);
                 // put offset of the data + 3 byte data type
                 blob[offset] = (byte) ((rec.recordType.ordinal() - 1) | ((dataOffset & 31) << 3));
                 int tdataOffset = dataOffset >>> 5;
-                for (int j = 1; j < blb.offsetSize; j++) {
+                for (int j = 1; j < currentState.getBlobDescription().getOffsetSize(); j++) {
                     blob[offset + j] = (byte) ((tdataOffset & 0xFF));
                     tdataOffset = dataOffset >>> 8;
                 }
-                offset += blb.offsetSize;
+                offset += currentState.getBlobDescription().getOffsetSize();
                 // put the data
-                dataOffset += utils.putValue(blob, rec, blb.headerOffset + dataOffset);
+                dataOffset += Util.putValue(blob, rec, currentState.getBlobDescription().getHeaderOffset() + dataOffset);
             }
         }
         return blob;
