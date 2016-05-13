@@ -16,7 +16,7 @@ import org.mariadb.dyncol.MariaDbDynamicColumn;
  Contain the value in DynamicColumn blob form.
  */
 public class Member {
-    public final static String UTF_8 = "UTF-8";
+    public static final String UTF_8 = "UTF-8";
     public DynamicType recordType;
     public byte[] value;
 
@@ -34,14 +34,14 @@ public class Member {
     }
 
     /**
-     * Convert from array of bytes (put 8 bits from every next byte of array on the top of the number)
+     * Convert from array of bytes (put 8 bits from every next byte of array on the top of the number),
      * saved as DynamicColumn signet int to normal int:
      * 1 -> 1
      * 2 -> -1
      * 3 -> 2
      * 4 -> -2
      * 5 -> 3
-     * 6 -> -3
+     * 6 -> -3.
      * 
      * @return converted value
      */
@@ -59,7 +59,7 @@ public class Member {
     }
 
     /**
-     * Convert from array of bytes (put 8 bits from every next byte of array on the top of the number)
+     * Convert from array of bytes (put 8 bits from every next byte of array on the top of the number).
      * 
      * @return converted value
      */
@@ -144,7 +144,7 @@ public class Member {
     }
 
     /**
-     * Convert a string in array of bytes and add a nummer of encoding (45 is UTF8)
+     * Convert a string in array of bytes and add a nummer of encoding (45 is UTF8).
      * 
      * @param val
      *            string that should be converted
@@ -170,7 +170,7 @@ public class Member {
     }
 
     /**
-     * Calculate uint size by cutting every next 8 bits untill value become 0
+     * Calculate uint size by cutting every next 8 bits untill value become 0.
      * 
      * @param val
      *            value

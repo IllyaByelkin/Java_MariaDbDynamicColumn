@@ -5,7 +5,7 @@ import java.util.Map;
 
 import org.mariadb.dyncol.blob.BlobDescription;
 
-/** This class contain HashMap with data, format of the DynamiColumns and description of the blob*/
+/** This class contain HashMap with data, format of the DynamiColumns and description of the blob. */
 public class State {
     private Map<String, Member> data = new HashMap<>();
     private boolean columnsWithStringFormat = false;

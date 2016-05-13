@@ -104,12 +104,14 @@ public class DynColTest {
         dynCol.setDouble("1", Double.MIN_VALUE);
         Assert.assertEquals(Double.MIN_VALUE, dynCol.getDouble("1"), 0.0001);
     }
+
     @Test (expected = Exception.class)
     public void setNullTest() throws SQLException, UnsupportedEncodingException {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
         dynCol.setString("1", null);
         dynCol.getString("1");
     }
+
     @Test
     public void setAfafStringTest() throws SQLException, UnsupportedEncodingException {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
@@ -127,22 +129,23 @@ public class DynColTest {
     @Test
     public void setJsonTest() throws SQLException, Exception {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
-        dynCol.setJson("{\"1\":1," +
-                "\"2\":-1," +
-                "\"3\":12.12," +
-                "\"4\":\"afaf\"}");
+        dynCol.setJson("{\"1\":1,"
+                + "\"2\":-1,"
+                + "\"3\":12.12,"
+                + "\"4\":\"afaf\"}");
         Assert.assertEquals(1, dynCol.getUint("1"));
         Assert.assertEquals(-1, dynCol.getInt("2"));
         Assert.assertEquals(12.12, dynCol.getDouble("3"), 0.0001);
         Assert.assertEquals("afaf", dynCol.getString("4"));
     }
+
     @Test
     public void getJsonTest() throws SQLException, Exception {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
-        dynCol.setJson("{\"1\":1," +
-                "\"2\":-1," +
-                "\"3\":12.12," +
-                "\"4\":\"afaf\"}");
+        dynCol.setJson("{\"1\":1,"
+                + "\"2\":-1,"
+                + "\"3\":12.12,"
+                + "\"4\":\"afaf\"}");
         dynCol.setJson(dynCol.getJson());
         Assert.assertEquals(1, dynCol.getUint("1"));
         Assert.assertEquals(-1, dynCol.getInt("2"));
@@ -153,10 +156,10 @@ public class DynColTest {
     @Test
     public void getBlobTest() throws SQLException, Exception {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
-        dynCol.setJson("{\"1\":1," +
-                "\"2\":-1," +
-                "\"3\":12.12," +
-                "\"4\":\"afaf\"}");
+        dynCol.setJson("{\"1\":1,"
+                + "\"2\":-1,"
+                + "\"3\":12.12,"
+                + "\"4\":\"afaf\"}");
         Assert.assertEquals("00040001000102000803001204005301013D0AD7A3703D28402D61666166",
                 javax.xml.bind.DatatypeConverter.printHexBinary(dynCol.getBlob()));
     }
@@ -164,10 +167,10 @@ public class DynColTest {
     @Test
     public void setBlobTest() throws SQLException, Exception {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
-        dynCol.setJson("{\"1\":1," +
-                "\"2\":-1," +
-                "\"3\":12.12," +
-                "\"4\":\"afaf\"}");
+        dynCol.setJson("{\"1\":1,"
+                + "\"2\":-1,"
+                + "\"3\":12.12,"
+                + "\"4\":\"afaf\"}");
         dynCol.setBlob(dynCol.getBlob());
         Assert.assertEquals(1, dynCol.getUint("1"));
         Assert.assertEquals(-1, dynCol.getInt("2"));
@@ -271,12 +274,14 @@ public class DynColTest {
         dynCol.setDouble("n", Double.MIN_VALUE);
         Assert.assertEquals(Double.MIN_VALUE, dynCol.getDouble("n"), 0.0001);
     }
+
     @Test (expected = Exception.class)
     public void setNullNamedTest() throws SQLException, UnsupportedEncodingException {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
         dynCol.setString("n", null);
         dynCol.getString("n");
     }
+
     @Test
     public void setAfafStringNamedTest() throws SQLException, UnsupportedEncodingException {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
@@ -294,22 +299,23 @@ public class DynColTest {
     @Test
     public void setJsonNamedTest() throws SQLException, Exception {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
-        dynCol.setJson("{\"1\":1," +
-                "\"2\":-1," +
-                "\"3\":12.12," +
-                "\"4\":{\"1\":-1}}");
+        dynCol.setJson("{\"1\":1,"
+                + "\"2\":-1,"
+                + "\"3\":12.12,"
+                + "\"4\":{\"1\":-1}}");
         Assert.assertEquals(1, dynCol.getUint("1"));
         Assert.assertEquals(-1, dynCol.getInt("2"));
         Assert.assertEquals(12.12, dynCol.getDouble("3"), 0.0001);
         Assert.assertEquals(-1, dynCol.getDynCol("4").getInt("1"));
     }
+
     @Test
     public void getJsonNamedTest() throws SQLException, Exception {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
-        dynCol.setJson("{\"1\":1," +
-                "\"2\":-1," +
-                "\"3\":12.12," +
-                "\"4\":{\"1\":-1}}");
+        dynCol.setJson("{\"1\":1,"
+                + "\"2\":-1,"
+                + "\"3\":12.12,"
+                + "\"4\":{\"1\":-1}}");
         dynCol.setJson(dynCol.getJson());
         Assert.assertEquals(1, dynCol.getUint("1"));
         Assert.assertEquals(-1, dynCol.getInt("2"));
@@ -320,10 +326,10 @@ public class DynColTest {
     @Test
     public void getBlobNamedTest() throws SQLException, Exception {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
-        dynCol.setJson("{\"1\":1," +
-                "\"2\":-1," +
-                "\"3\":12.12," +
-                "\"4\":{\"1\":-1}}");
+        dynCol.setJson("{\"1\":1,"
+                + "\"2\":-1,"
+                + "\"3\":12.12,"
+                + "\"4\":{\"1\":-1}}");
         Assert.assertEquals("04040004000000010001001000020022000300A8003132333401013D0AD7A3703D284000010001000001",
                 javax.xml.bind.DatatypeConverter.printHexBinary(dynCol.getBlob()));
     }
@@ -331,10 +337,10 @@ public class DynColTest {
     @Test
     public void setBlobNamedTest() throws SQLException, Exception {
         MariaDbDynamicColumn dynCol = new MariaDbDynamicColumn();
-        dynCol.setJson("{\"1\":1," +
-                "\"2\":-1," +
-                "\"3\":12.12," +
-                "\"4\":{\"1\":-1}}");
+        dynCol.setJson("{\"1\":1,"
+                + "\"2\":-1,"
+                + "\"3\":12.12,"
+                + "\"4\":{\"1\":-1}}");
         dynCol.setBlob(dynCol.getBlob());
         Assert.assertEquals(1, dynCol.getUint("1"));
         Assert.assertEquals(-1, dynCol.getInt("2"));

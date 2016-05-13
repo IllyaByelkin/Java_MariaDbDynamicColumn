@@ -17,32 +17,32 @@ import org.mariadb.dyncol.data.State;
  */
 public class Util {
 
-    public final static String UTF_8 = "UTF-8";
-    public final static String EUC_JP = "euc_jp";
-    public final static String GB2312 = "gb2312";
-    public final static String EUC_KR = "euc_kr";
-    public final static String CP850 = "cp850";
-    public final static String CP852 = "cp852";
-    public final static String CP866 = "cp66";
-    public final static String LATIN1 = "latin1";
-    public final static String LATIN2 = "latin2";
-    public final static String GREEK = "greek";
-    public final static String HEBREW = "hebrew";
-    public final static String LATIN5 = "latin5";
-    public final static String KOI8_R = "koi8_r";
-    public final static String KOI8_U = "koi8_u";
-    public final static String SJIS = "sjis";
-    public final static String TIS620 = "tis620";
-    public final static String ASCII = "ASCII";
-    public final static String UTF16 = "utf16";
-    public final static String ISO_10646_UCS_2 = "ISO-10646-UCS-2";
-    public final static String UTF_16LE = "UTF_16LE";
-    public final static String UTF32 = "UTF32";
-    public final static String CP1250 = "cp1250";
-    public final static String CP1251 = "cp1251";
-    public final static String CP1256 = "cp1256";
-    public final static String CP1257 = "cp1257";
-    public final static String MACROMAN = "MacRoman";
+    public static final String UTF_8 = "UTF-8";
+    public static final String EUC_JP = "euc_jp";
+    public static final String GB2312 = "gb2312";
+    public static final String EUC_KR = "euc_kr";
+    public static final String CP850 = "cp850";
+    public static final String CP852 = "cp852";
+    public static final String CP866 = "cp66";
+    public static final String LATIN1 = "latin1";
+    public static final String LATIN2 = "latin2";
+    public static final String GREEK = "greek";
+    public static final String HEBREW = "hebrew";
+    public static final String LATIN5 = "latin5";
+    public static final String KOI8_R = "koi8_r";
+    public static final String KOI8_U = "koi8_u";
+    public static final String SJIS = "sjis";
+    public static final String TIS620 = "tis620";
+    public static final String ASCII = "ASCII";
+    public static final String UTF16 = "utf16";
+    public static final String ISO_10646_UCS_2 = "ISO-10646-UCS-2";
+    public static final String UTF_16LE = "UTF_16LE";
+    public static final String UTF32 = "UTF32";
+    public static final String CP1250 = "cp1250";
+    public static final String CP1251 = "cp1251";
+    public static final String CP1256 = "cp1256";
+    public static final String CP1257 = "cp1257";
+    public static final String MACROMAN = "MacRoman";
 
     /**
      * Decide witch type of string would be, if you add this member.
@@ -73,17 +73,27 @@ public class Util {
     public static  boolean parseJson(String sstr, Map<String, Member> data, State currentState) throws Exception {
         boolean result = false;
         /**
-         * {@value #testTable} is transition table of the finite-state machine
+         * {@value #testTable} is transition table of the finite-state machine.
          */ 
 
-        int testTable[][] = { { 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, { 1, -1, -1, 2, -1, -1, 7, -1, -1, -1, -1, -1 },
-                { 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2 }, { 3, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1 },
-                { 4, 1, 5, 8, -1, -1, -1, -1, -1, 10, 6, -1 }, { 6, -1, 5, -1, -1, -1, 7, 1, -1, -1, -1, 5 },
-                { 6, -1, -1, -1, -1, -1, 7, 1, -1, -1, -1, -1 }, { 7, -1, -1, -1, -1, -1, 7, 1, -1, -1, -1, -1 },
-                { 8, 8, 11, 9, 8, 8, 8, 8, 8, 8, 8, 8 }, { 9, -1, -1, -1, -1, -1, 7, 1, -1, -1, -1, -1 },
-                { -1, -1, 5, -1, -1, -1, 7, 1, -1, -1, -1, -1 }, { 8, 8, 11, 9, 12, 8, 8, 8, 8, 15, 8, 8 }, { 8, 8, 12, 9, 13, 8, 8, 8, 8, 8, 8, 8 },
-                { 8, 8, 13, 9, 14, 8, 8, 8, 8, 8, 8, 8 }, { 8, 8, 14, 9, 8, 8, 8, 8, 8, 8, 8, 8 }, { 17, 8, 15, 9, 8, 8, 8, 8, 8, 16, 8, 8 },
-                { 17, 8, 16, 9, 8, 8, 8, 8, 8, 8, 8, 8 }, { 8, 8, 11, 9, 8, 8, 8, 8, 8, 8, 8, 8 } };
+        int[][] testTable = {{ 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
+            { 1, -1, -1, 2, -1, -1, 7, -1, -1, -1, -1, -1 },
+            { 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2 },
+            { 3, -1, -1, -1, 4, -1, -1, -1, -1, -1, -1, -1 },
+            { 4, 1, 5, 8, -1, -1, -1, -1, -1, 10, 6, -1 },
+            { 6, -1, 5, -1, -1, -1, 7, 1, -1, -1, -1, 5 },
+            { 6, -1, -1, -1, -1, -1, 7, 1, -1, -1, -1, -1 },
+            { 7, -1, -1, -1, -1, -1, 7, 1, -1, -1, -1, -1 },
+            { 8, 8, 11, 9, 8, 8, 8, 8, 8, 8, 8, 8 },
+            { 9, -1, -1, -1, -1, -1, 7, 1, -1, -1, -1, -1 },
+            { -1, -1, 5, -1, -1, -1, 7, 1, -1, -1, -1, -1 },
+            { 8, 8, 11, 9, 12, 8, 8, 8, 8, 15, 8, 8 },
+            { 8, 8, 12, 9, 13, 8, 8, 8, 8, 8, 8, 8 },
+            { 8, 8, 13, 9, 14, 8, 8, 8, 8, 8, 8, 8 },
+            { 8, 8, 14, 9, 8, 8, 8, 8, 8, 8, 8, 8 },
+            { 17, 8, 15, 9, 8, 8, 8, 8, 8, 16, 8, 8 },
+            { 17, 8, 16, 9, 8, 8, 8, 8, 8, 8, 8, 8 },
+            { 8, 8, 11, 9, 8, 8, 8, 8, 8, 8, 8, 8 }};
         char character;
         int abscissa = 0;
         int ordinate = 0;
@@ -128,7 +138,7 @@ public class Util {
                     }
                     break;
                 default:
-                    if (character == ' ' || character == '	') {
+                    if (character == ' ' || character == '\t') {
                         abscissa = 0;
                     } else if (character >= '0' && character <= '9') {
                         abscissa = 2;
@@ -293,7 +303,7 @@ public class Util {
      * @throws SQLException Unsupported data length
      */
     public static int getBlobLength(State currentState) throws SQLException {
-        int columnCount = currentState.getData().size();
+        final int columnCount = currentState.getData().size();
         int res = 0;
         currentState.getBlobDescription().setNmpoolSize(0);
         for (String key : currentState.getData().keySet()) {
@@ -304,14 +314,18 @@ public class Util {
             }
         }
         currentState.getBlobDescription().setOffsetSize(offsetBytes(res, currentState));
-        currentState.getBlobDescription().setHeaderOffset(columnCount * (2 + currentState.getBlobDescription().getOffsetSize()) + (currentState.isColumnsWithStringFormat() ? 5 : 3));
+        currentState.getBlobDescription().setHeaderOffset(columnCount
+            * (2 + currentState.getBlobDescription().getOffsetSize())
+            + (currentState.isColumnsWithStringFormat() ? 5 : 3));
         res += currentState.getBlobDescription().getNmpoolSize();
         res += currentState.getBlobDescription().getHeaderOffset();
         return res;
     }
 
     /**
-     * Calculate size of the offset pool, without "if (dataLength < 0xfffffffff)" (as it was in original C vertion), because maximal array index is maximal value of signed int
+     * Calculate size of the offset pool,
+     * without "if (dataLength < 0xfffffffff)" (as it was in original C vertion),
+     * because maximal array index is maximal value of signed int.
      * @return size of the offset pool
      * @throws SQLException Unsupported data length
      */
@@ -377,7 +391,7 @@ public class Util {
     }
 
     /**
-     * Sort members by the name, use quicksort
+     * Sort members by the name, use quicksort.
      *
      * @param array
      *            is array that should be sorting
@@ -644,7 +658,10 @@ public class Util {
     public static void saveValue(byte[] blob, Member rc, int offsetValue, int byteLong, State currentState) {
         rc.value = new byte[byteLong];
         for (int index = 0; index < byteLong; index++) {
-            rc.value[index] = blob[currentState.getBlobDescription().getHeaderOffset() + currentState.getBlobDescription().getNmpoolSize() + offsetValue + index];
+            rc.value[index] = blob[currentState.getBlobDescription().getHeaderOffset()
+                + currentState.getBlobDescription().getNmpoolSize()
+                + offsetValue
+                + index];
         }
     }
 
@@ -743,7 +760,7 @@ public class Util {
      * Conversion a type of the member to MariaDbDynamicColumn.
      * @param mem Member
      * @return Conversed value
-     * @throws Exception
+     * @throws Exception Parameter unknown and Invalid parameter type
      */
     public static MariaDbDynamicColumn getMemberDynColValue(Member mem) throws Exception  {
         switch (mem.recordType) {

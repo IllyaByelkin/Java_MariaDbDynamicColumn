@@ -21,14 +21,15 @@ import java.sql.SQLException;
  ...
  ...
  */
-public class MariaDbDynamicColumn <T> {
+public class MariaDbDynamicColumn<T> {
 
     public DynamicType recordTypes;
     State currentState = new State();
 
     /**
+     * This function set blob automatically.
      * @param blob DynamicColums
-     * @param tt
+     * @param tt procesed object
      * @throws Exception Dynamic type is unknown and UnsupportedEncodingException
      */
     public void setBlob0(byte[] blob, T tt) throws Exception {
@@ -45,14 +46,14 @@ public class MariaDbDynamicColumn <T> {
             for (Method method : allMethods) {
                 String methodName = method.getName();
                 if (methodName.equals(memberCapitalizeMethod)) {
-                    Type[] pType = method.getGenericParameterTypes();
-                    if (pType.length != 1) {
+                    Type[] prametrType = method.getGenericParameterTypes();
+                    if (prametrType.length != 1) {
                         continue;
                     }
                     try {
                         Member member = entry.getValue();
                         method.setAccessible(true);
-                        switch (pType[0].toString()) {
+                        switch (prametrType[0].toString()) {
                             case "byte":
                                 method.invoke(instance, (byte)Util.getMemberIntValue(member));
                                 break;
@@ -434,7 +435,9 @@ public class MariaDbDynamicColumn <T> {
             // read the column count from 1st and 2nd bytes
             columnCount = ((blob[2] & 0xFF) << 8) | (blob[1] & 0xFF);
             // calculating offset of all the header
-            currentState.getBlobDescription().setHeaderOffset((currentState.isColumnsWithStringFormat() ? 5 : 3) + columnCount * (2 + currentState.getBlobDescription().getOffsetSize()));
+            currentState.getBlobDescription().setHeaderOffset((currentState.isColumnsWithStringFormat() ? 5 : 3)
+                + columnCount
+                * (2 + currentState.getBlobDescription().getOffsetSize()));
             if (currentState.isColumnsWithStringFormat()) {
                 // read name pool size from bytes #3 and 4
                 currentState.getBlobDescription().setNmpoolSize(((blob[4] & 0xFF) << 8) | (blob[3] & 0xFF));
@@ -626,7 +629,9 @@ public class MariaDbDynamicColumn <T> {
                 }
                 nameOffset += name.length;
                 // put the data
-                dataOffset += Util.putValue(blob, rec, currentState.getBlobDescription().getHeaderOffset() + currentState.getBlobDescription().getNmpoolSize() + dataOffset);
+                dataOffset += Util.putValue(blob, rec, currentState.getBlobDescription().getHeaderOffset()
+                + currentState.getBlobDescription().getNmpoolSize()
+                + dataOffset);
             }
         } else {
             int[] keyarray = new int[columnCount];

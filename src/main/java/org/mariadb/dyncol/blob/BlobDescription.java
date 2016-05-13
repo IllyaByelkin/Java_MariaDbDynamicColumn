@@ -9,13 +9,13 @@ package org.mariadb.dyncol.blob;
 
 /** This class contain information about blob. */
 public class BlobDescription {
-    /** number of bytes that you need to save size of offset*/
+    /** number of bytes that you need to save size of offset. */
     private int offsetSize;
-    /** size of the pool of names in bytes */
+    /** size of the pool of names in bytes. */
     private int nmpoolSize = 0;
-    /** size of the Blob in bytes */
+    /** size of the Blob in bytes. */
     private int blobSize = 0;
-    /** numer of the byte after header part */
+    /** numer of the byte after header part. */
     private int headerOffset = 0;
 
     public void setOffsetSize(int offsetSize) {
